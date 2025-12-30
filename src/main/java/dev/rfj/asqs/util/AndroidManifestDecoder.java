@@ -2,15 +2,48 @@ package dev.rfj.asqs.util;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Deque;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+/**
+ * Pure Java AndroidManifest.xml decoder (binary AXML -> readable XML) with no dependencies.
+ *
+ * Features:
+ * - Extracts AndroidManifest.xml from APK
+ * - Correctly parses AXML chunks
+ * - Decodes string pool (UTF-8 + UTF-16)
+ * - Proper START_TAG parsing (fixes empty attributes issue)
+ * - Adds android: prefix where applicable
+ * - Emits xmlns:android only if used
+ * - Prints @0x... and ?0x... for references/attributes
+ */
 public class AndroidManifestDecoder {
 
     public static final int BYTE_BUFFER_SIZE = 8192;
+
+    // Chunk types
+    private static final int CHUNK_AXML_FILE         = 0x0003;
+    private static final int CHUNK_STRING_POOL       = 0x0001;
+    private static final int CHUNK_RESOURCE_IDS      = 0x0180;
+    private static final int CHUNK_XML_START_NS      = 0x0100;
+    private static final int CHUNK_XML_END_NS        = 0x0101;
+    private static final int CHUNK_XML_START_TAG     = 0x0102;
+    private static final int CHUNK_XML_END_TAG       = 0x0103;
+    private static final int CHUNK_XML_TEXT          = 0x0104;
+
+    // Value types (Res_value.dataType)
+    private static final int TYPE_NULL       = 0x00;
+    private static final int TYPE_REFERENCE  = 0x01; // @0x...
+    private static final int TYPE_ATTRIBUTE  = 0x02; // ?0x...
+    private static final int TYPE_STRING     = 0x03;
+    private static final int TYPE_FLOAT      = 0x04;
+    private static final int TYPE_INT_DEC    = 0x10;
+    private static final int TYPE_INT_HEX    = 0x11;
+    private static final int TYPE_INT_BOOLEAN= 0x12;
+
+    // Common Manifest namespace
+    private static final String ANDROID_NS_URI = "http://schemas.android.com/apk/res/android";
 
     public static String decodeManifestFromApk(File apkFile) throws IOException {
         byte[] axml = extractFileFromApk(apkFile, "AndroidManifest.xml");
@@ -36,24 +69,30 @@ public class AndroidManifestDecoder {
         return baos.toByteArray();
     }
 
+    /**
+     * Decode binary AXML bytes into readable XML.
+     */
     public static String decodeAxml(byte[] data) throws IOException {
         ByteBufferReader br = new ByteBufferReader(data);
 
-        // AXML file begins with an XML chunk header
         int type = br.readU16();
         br.readU16(); // headerSize
         int chunkSize = br.readU32();
 
-        if (type != 0x0003) {
+        if (type != CHUNK_AXML_FILE) {
             throw new IOException("Not an AXML file: type=0x" + Integer.toHexString(type));
         }
 
         StringPool strings = null;
-        int[] resourceIds = null;
 
         StringBuilder out = new StringBuilder();
         Deque<String> tagStack = new ArrayDeque<>();
 
+        // We'll detect if android namespace was used in attributes.
+        boolean androidNsUsed = false;
+
+        // We can track namespaces, but for manifest readability we only need android xmlns.
+        // If needed later, you can emit additional namespaces here.
         int end = chunkSize;
         while (br.position() < end) {
             int chunkType = br.readU16();
@@ -62,112 +101,176 @@ public class AndroidManifestDecoder {
             int chunkStart = br.position() - 8;
 
             switch (chunkType) {
-                case 0x0001: // STRING_POOL
+                case CHUNK_STRING_POOL:
                     strings = StringPool.parse(br, chunkStart, size);
                     break;
 
-                case 0x0180: // RESOURCE_IDS
-                    resourceIds = parseResourceIds(br, size);
+                case CHUNK_RESOURCE_IDS:
+                    // We don't need this for decoding attributes by name (string pool already has them)
+                    // But we must consume it correctly.
+                    br.seek(chunkStart + size);
                     break;
 
-                case 0x0102: // START_TAG
+                case CHUNK_XML_START_NS:
+                case CHUNK_XML_END_NS:
+                    // Namespace chunks not required for basic readability.
+                    // Don't manually skip; the loop will seek to chunk end.
+                    break;
+
+                case CHUNK_XML_START_TAG: {
                     if (strings == null) throw new IOException("String pool not parsed yet.");
 
-                    // parse start tag
                     br.readU32(); // lineNumber
                     br.readU32(); // comment
+
                     int nsIdx = br.readU32();
                     int nameIdx = br.readU32();
-                    br.readU32(); // flags
-                    int attrCount = br.readU16();
-                    br.readU16(); // classAttr
-                    br.readU16(); // idAttr
-                    br.readU16(); // styleAttr
-                    br.readU16(); // unused
 
-                    String ns = nsIdx == -1 ? null : strings.get(nsIdx);
-                    String name = strings.get(nameIdx);
+                    // ✅ Correct ResXMLTree_attrExt structure:
+                    int attrStart = br.readU16();
+                    int attrSize  = br.readU16();
+                    int attrCount = br.readU16();
+                    int idIndex   = br.readU16();
+                    int classIndex= br.readU16();
+                    int styleIndex= br.readU16();
+
+                    String tagName = strings.get(nameIdx);
                     String indent = indent(tagStack.size());
 
-                    out.append(indent).append("<").append(name);
+                    // If this is the root <manifest> tag, we may later inject xmlns:android
+                    boolean isManifestRoot = tagStack.isEmpty() && "manifest".equals(tagName);
 
-                    // attributes
+                    out.append(indent).append("<").append(tagName);
+
+                    // Parse attributes
+                    List<Attr> attrs = new ArrayList<>(attrCount);
+
                     for (int i = 0; i < attrCount; i++) {
-                        int attrNs = br.readU32();
-                        int attrName = br.readU32();
-                        int rawValue = br.readU32();
-                        int typedSize = br.readU16();
-                        br.readU8(); // zero
-                        int dataType = br.readU8();
-                        int dataValue = br.readU32();
+                        int attrNsIdx = br.readU32();
+                        int attrNameIdx = br.readU32();
+                        int rawValueIdx = br.readU32();
 
-                        String aName = strings.get(attrName);
-                        String aValue;
+                        int valueSize = br.readU16();
+                        br.readU8(); // res0
+                        int valueType = br.readU8();
+                        int valueData = br.readU32();
 
-                        if (rawValue != -1) {
-                            aValue = strings.get(rawValue);
+                        String attrName = strings.get(attrNameIdx);
+                        String attrNs = (attrNsIdx == -1) ? null : strings.get(attrNsIdx);
+
+                        String value;
+                        if (rawValueIdx != -1) {
+                            value = strings.get(rawValueIdx);
                         } else {
-                            aValue = decodeTypedValue(dataType, dataValue, strings);
+                            value = decodeTypedValue(valueType, valueData, strings);
                         }
 
-                        out.append(" ").append(aName).append("=\"")
-                                .append(escapeXml(aValue)).append("\"");
+                        boolean isAndroidNs = ANDROID_NS_URI.equals(attrNs);
+                        if (isAndroidNs) androidNsUsed = true;
+
+                        String fullAttrName = attrName;
+                        if (isAndroidNs) {
+                            fullAttrName = "android:" + attrName;
+                        }
+
+                        attrs.add(new Attr(fullAttrName, value));
+                    }
+
+                    // Inject xmlns:android only once on root <manifest>, only if android ns used.
+                    if (isManifestRoot && androidNsUsed) {
+                        out.append(" xmlns:android=\"").append(ANDROID_NS_URI).append("\"");
+                    }
+
+                    // Write attributes
+                    for (Attr a : attrs) {
+                        out.append(" ")
+                                .append(a.name)
+                                .append("=\"")
+                                .append(escapeXml(a.value))
+                                .append("\"");
                     }
 
                     out.append(">\n");
-                    tagStack.push(name);
+                    tagStack.push(tagName);
                     break;
+                }
 
-                case 0x0103: // END_TAG
+                case CHUNK_XML_END_TAG: {
+                    if (strings == null) throw new IOException("String pool not parsed yet.");
+
                     br.readU32(); // lineNumber
                     br.readU32(); // comment
-                    br.readU32(); // ns
-                    int endNameIdx = br.readU32();
-                    String endName = strings.get(endNameIdx);
+                    br.readU32(); // nsIdx
+                    int nameIdx = br.readU32();
 
-                    String openName = tagStack.pop();
-                    String endIndent = indent(tagStack.size());
-                    out.append(endIndent).append("</").append(endName).append(">\n");
-                    break;
+                    String tagName = strings.get(nameIdx);
 
-                case 0x0101: // START_NAMESPACE
-                case 0x0100: // END_NAMESPACE
-                    // namespace not necessary for basic manifest readability
-                    br.skip(size - 8);
+                    tagStack.pop();
+                    out.append(indent(tagStack.size()))
+                            .append("</").append(tagName).append(">\n");
                     break;
+                }
+
+                case CHUNK_XML_TEXT: {
+                    // Optional: manifest rarely uses text nodes.
+                    // Layout: lineNumber, comment, textIdx, unknown, unknown
+                    br.readU32(); // lineNumber
+                    br.readU32(); // comment
+                    int textIdx = br.readU32();
+                    br.readU32(); // unknown
+                    br.readU32(); // unknown
+
+                    if (strings != null) {
+                        String text = strings.get(textIdx);
+                        if (text != null && !text.trim().isEmpty()) {
+                            out.append(indent(tagStack.size()))
+                                    .append(escapeXml(text.trim()))
+                                    .append("\n");
+                        }
+                    }
+                    break;
+                }
 
                 default:
-                    // Skip unknown chunk
-                    br.skip(size - 8);
+                    // Unknown chunk: skip
                     break;
             }
 
-            // Ensure we move to chunk end
+            // Always move to chunk end
             br.seek(chunkStart + size);
         }
 
         return out.toString();
     }
 
-    private static int[] parseResourceIds(ByteBufferReader br, int size) {
-        int count = (size - 8) / 4;
-        int[] ids = new int[count];
-        for (int i = 0; i < count; i++) ids[i] = br.readU32();
-        return ids;
-    }
-
     private static String decodeTypedValue(int type, int data, StringPool sp) {
-        // Most manifest values are strings or ints; handle common ones
         switch (type) {
-            case 0x03: // TYPE_STRING
+            case TYPE_STRING:
                 return sp.get(data);
-            case 0x10: // TYPE_INT_DEC
+
+            case TYPE_REFERENCE:
+                return "@0x" + Integer.toHexString(data);
+
+            case TYPE_ATTRIBUTE:
+                return "?0x" + Integer.toHexString(data);
+
+            case TYPE_INT_DEC:
                 return Integer.toString(data);
-            case 0x11: // TYPE_INT_HEX
+
+            case TYPE_INT_HEX:
                 return "0x" + Integer.toHexString(data);
-            case 0x12: // TYPE_INT_BOOLEAN
+
+            case TYPE_INT_BOOLEAN:
                 return data != 0 ? "true" : "false";
+
+            case TYPE_FLOAT:
+                return Float.toString(Float.intBitsToFloat(data));
+
+            case TYPE_NULL:
+                return "";
+
             default:
+                // Unknown types: print hex
                 return "0x" + Integer.toHexString(data);
         }
     }
@@ -185,7 +288,18 @@ public class AndroidManifestDecoder {
                 .replace("'", "&apos;");
     }
 
-    // ==== String Pool ====
+    // Simple attr container
+    private static class Attr {
+        final String name;
+        final String value;
+
+        Attr(String name, String value) {
+            this.name = name;
+            this.value = value;
+        }
+    }
+
+    // ========= String Pool =========
 
     private static class StringPool {
         private final String[] strings;
@@ -221,20 +335,20 @@ public class AndroidManifestDecoder {
             return new StringPool(decoded);
         }
 
-        private static String readUtf8String(ByteBufferReader br, int offset) throws IOException {
+        private static String readUtf8String(ByteBufferReader br, int offset) {
             br.seek(offset);
-            readLength8(br); // utf16 len (ignored)
+            readLength8(br); // utf16 length (ignored)
             int byteLen = readLength8(br);
             byte[] buf = br.readBytes(byteLen);
-            br.readU8(); // null
+            br.readU8(); // null terminator
             return new String(buf, StandardCharsets.UTF_8);
         }
 
-        private static String readUtf16String(ByteBufferReader br, int offset) throws IOException {
+        private static String readUtf16String(ByteBufferReader br, int offset) {
             br.seek(offset);
             int charLen = readLength16(br);
             byte[] buf = br.readBytes(charLen * 2);
-            br.readU16(); // null
+            br.readU16(); // null terminator
             return new String(buf, StandardCharsets.UTF_16LE);
         }
 
@@ -255,7 +369,7 @@ public class AndroidManifestDecoder {
         }
     }
 
-    // ==== Byte buffer reader (Little Endian) ====
+    // ========= ByteBufferReader (Little Endian) =========
 
     private static class ByteBufferReader {
         private final byte[] data;
@@ -265,14 +379,12 @@ public class AndroidManifestDecoder {
             this.data = data;
         }
 
-        int position() { return pos; }
+        int position() {
+            return pos;
+        }
 
         void seek(int newPos) {
             pos = newPos;
-        }
-
-        void skip(int n) {
-            pos += n;
         }
 
         int readU8() {
@@ -301,4 +413,3 @@ public class AndroidManifestDecoder {
         }
     }
 }
-
