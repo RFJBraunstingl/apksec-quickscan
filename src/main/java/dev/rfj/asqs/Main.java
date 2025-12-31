@@ -1,35 +1,86 @@
 package dev.rfj.asqs;
 
-import dev.rfj.asqs.rules.impl.PrintAndroidManifest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import dev.rfj.asqs.rules.AbstractRule;
+import dev.rfj.asqs.rules.impl.AllowsCleartextTraffic;
+import dev.rfj.asqs.rules.impl.UsesFirebase;
+import dev.rfj.asqs.util.FileGlobber;
 
 import java.io.File;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.Paths;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class Main {
 
-    private static final Logger log = LoggerFactory.getLogger(Main.class);
+    private static final Logger log = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) {
-        if (args.length < 2) {
-            System.err.println("Usage: java -jar asqs.jar <pattern>");
+        log.info("args: " + Arrays.toString(args));
+        if ("-h".equalsIgnoreCase(args[0])) {
+            System.err.println("Usage: java -jar asqs.jar <pattern>[ <pattern>[ <pattern>[...]]]");
             return;
         }
 
         log.info("Starting ASQS");
-        String pattern = args[1];
+
+        List<File> files = new LinkedList<>();
+        for (int i = 0; i < args.length; i++) {
+            String pattern = args[i];
+            List<File> filesForPattern = FileGlobber.getFilesForPattern(pattern);
+            log.info("found %d files for pattern '%s' ".formatted(
+                    filesForPattern.size(),
+                    pattern
+            ));
+            files.addAll(filesForPattern);
+        }
+        log.info("Found %d files overall".formatted(files.size()));
+
+        AbstractRule[] rules = constructRules();
+
+        StringBuilder csvBuilder = new StringBuilder();
+        csvBuilder.append("file");
+        for (AbstractRule rule : rules) {
+            csvBuilder.append(",");
+            csvBuilder.append(rule.getClass().getSimpleName());
+        }
+        csvBuilder.append("\n");
+
         long startTime = System.currentTimeMillis();
+        for (File file : files) {
+            log.finest("processing file '%s'".formatted(file));
+            long startTimeForFile = System.currentTimeMillis();
+            String csvLine = Arrays.stream(rules)
+                    .map(rule -> rule.raisesRedFlag(file))
+                    .map(Object::toString)
+                    .collect(Collectors.joining(","));
+            csvBuilder
+                    .append(file.getName())
+                    .append(",")
+                    .append(csvLine)
+                    .append("\n");
+            long endTimeForFile = System.currentTimeMillis();
+            log.finest("applied %d rules in %dms".formatted(rules.length, endTimeForFile - startTimeForFile));
+        }
+        long endTime = System.currentTimeMillis();
+        log.info("processed %d files in %dms".formatted(files.size(), endTime - startTime));
 
-        log.debug("grabbing files for pattern '{}'", pattern);
-        PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
-        matcher.
+        File outputFile = new File("result-%d.csv".formatted(System.currentTimeMillis()));
+        try (FileWriter writer = new FileWriter(outputFile)) {
+            writer.write(csvBuilder.toString());
+        } catch (IOException e) {
+            log.warning("failed to write result.csv");
+        }
+    }
 
-        Path path = Paths.get("src", "test", "resources", "dummy-apks", "navigation-drawer-example-debug.apk");
-        File apk = path.toFile();
-        new PrintAndroidManifest().raisesRedFlag(apk);
+    private static AbstractRule[] constructRules() {
+        return new AbstractRule[]{
+                new UsesFirebase(),
+                new AllowsCleartextTraffic()
+        };
     }
 }
