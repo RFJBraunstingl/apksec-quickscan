@@ -18,8 +18,8 @@ public abstract class AndroidManifestBasedRule extends AbstractRule {
             );
         } catch (IOException e) {
             logger.warning("failed to extract manifest from apk: " + apk.getAbsolutePath());
+            return false;
         }
-        return false;
     }
 
     protected abstract boolean androidManifestRaisesRedFlag(String androidManifest);
