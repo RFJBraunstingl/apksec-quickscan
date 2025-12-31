@@ -8,10 +8,10 @@ import dev.rfj.asqs.util.FileGlobber;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -20,13 +20,13 @@ public class Main {
     private static final Logger log = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) {
-        log.info("args: " + Arrays.toString(args));
-        if ("-h".equalsIgnoreCase(args[0])) {
+        if (args.length < 1 || "-h".equalsIgnoreCase(args[0])) {
             System.err.println("Usage: java -jar asqs.jar <pattern>[ <pattern>[ <pattern>[...]]]");
             return;
         }
 
         log.info("Starting ASQS");
+        log.info("args: " + Arrays.toString(args));
 
         List<File> files = new LinkedList<>();
         for (String pattern : args) {
@@ -54,7 +54,7 @@ public class Main {
 
         long startTime = System.currentTimeMillis();
         for (File file : files) {
-            log.finest(String.format(
+            log.info(String.format(
                     "processing file '%s'",
                     file
             ));
@@ -69,7 +69,7 @@ public class Main {
                     .append(csvLine)
                     .append("\n");
             long endTimeForFile = System.currentTimeMillis();
-            log.finest(String.format(
+            log.info(String.format(
                     "applied %d rules in %dms",
                     rules.length,
                     endTimeForFile - startTimeForFile
