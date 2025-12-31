@@ -6,6 +6,7 @@ import java.nio.file.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Collections.*;
@@ -32,9 +33,12 @@ public class FileGlobber {
             return stream
                     .filter(matcher::matches)
                     .map(Path::toFile)
-                    .toList();
+                    .collect(Collectors.toList());
         } catch (IOException e) {
-            log.warning("failed to list files in pattern '%s'".formatted(pattern));
+            log.warning(String.format(
+                    "failed to list files in pattern '%s'",
+                    pattern
+            ));
             return Collections.emptyList();
         }
     }

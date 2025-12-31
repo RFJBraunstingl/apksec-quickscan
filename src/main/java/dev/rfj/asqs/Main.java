@@ -29,16 +29,18 @@ public class Main {
         log.info("Starting ASQS");
 
         List<File> files = new LinkedList<>();
-        for (int i = 0; i < args.length; i++) {
-            String pattern = args[i];
+        for (String pattern : args) {
             List<File> filesForPattern = FileGlobber.getFilesForPattern(pattern);
-            log.info("found %d files for pattern '%s' ".formatted(
+            log.info(String.format("found %d files for pattern '%s' ",
                     filesForPattern.size(),
                     pattern
             ));
             files.addAll(filesForPattern);
         }
-        log.info("Found %d files overall".formatted(files.size()));
+        log.info(String.format(
+                "Found %d files overall",
+                files.size()
+        ));
 
         AbstractRule[] rules = constructRules();
 
@@ -52,7 +54,10 @@ public class Main {
 
         long startTime = System.currentTimeMillis();
         for (File file : files) {
-            log.finest("processing file '%s'".formatted(file));
+            log.finest(String.format(
+                    "processing file '%s'",
+                    file
+            ));
             long startTimeForFile = System.currentTimeMillis();
             String csvLine = Arrays.stream(rules)
                     .map(rule -> rule.raisesRedFlag(file))
@@ -64,12 +69,23 @@ public class Main {
                     .append(csvLine)
                     .append("\n");
             long endTimeForFile = System.currentTimeMillis();
-            log.finest("applied %d rules in %dms".formatted(rules.length, endTimeForFile - startTimeForFile));
+            log.finest(String.format(
+                    "applied %d rules in %dms",
+                    rules.length,
+                    endTimeForFile - startTimeForFile
+            ));
         }
         long endTime = System.currentTimeMillis();
-        log.info("processed %d files in %dms".formatted(files.size(), endTime - startTime));
+        log.info(String.format(
+                "processed %d files in %dms",
+                files.size(),
+                endTime - startTime)
+        );
 
-        File outputFile = new File("result-%d.csv".formatted(System.currentTimeMillis()));
+        File outputFile = new File(String.format(
+                "result-%d.csv",
+                System.currentTimeMillis()
+        ));
         try (FileWriter writer = new FileWriter(outputFile)) {
             writer.write(csvBuilder.toString());
         } catch (IOException e) {
