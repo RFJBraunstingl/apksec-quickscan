@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -52,8 +51,11 @@ public class Main {
         }
         csvBuilder.append("\n");
 
-        processUsingFor(files, rules);
-        processUsingParallelStream(files, rules);
+        if (isMultiThreadedMode(args)) {
+            processUsingParallelStream(files, rules, csvBuilder);
+        } else {
+            processUsingFori(files, rules, csvBuilder);
+        }
 
         File outputFile = new File(String.format(
                 "result-%d.csv",
@@ -66,8 +68,17 @@ public class Main {
         }
     }
 
-    private static void processUsingParallelStream(List<File> files, AbstractRule[] rules) {
-        StringBuilder csvBuilder = new StringBuilder();
+    // check if one of the arguments is "--single-threaded"
+    private static boolean isMultiThreadedMode(String[] args) {
+        for (String arg : args) {
+            if ("--single-threaded".equalsIgnoreCase(arg)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static void processUsingParallelStream(List<File> files, AbstractRule[] rules, StringBuilder csvBuilder) {
         long startTime = System.currentTimeMillis();
         files.parallelStream()
                 .forEach(file -> {
@@ -101,8 +112,7 @@ public class Main {
         );
     }
 
-    private static void processUsingFor(List<File> files, AbstractRule[] rules) {
-        StringBuilder csvBuilder = new StringBuilder();
+    private static void processUsingFori(List<File> files, AbstractRule[] rules, StringBuilder csvBuilder) {
         long startTime = System.currentTimeMillis();
         for (File file : files) {
             log.fine(String.format(
