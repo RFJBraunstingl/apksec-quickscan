@@ -1,7 +1,5 @@
 package dev.rfj.asqs.rules;
 
-import com.sun.org.slf4j.internal.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Logger;

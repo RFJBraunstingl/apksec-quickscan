@@ -276,7 +276,11 @@ public class AndroidManifestDecoder {
     }
 
     private static String indent(int depth) {
-        return "  ".repeat(Math.max(0, depth));
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < Math.max(0, depth); i++) {
+            sb.append("  ");
+        }
+        return sb.toString();
     }
 
     private static String escapeXml(String s) {
