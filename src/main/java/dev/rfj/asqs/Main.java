@@ -52,9 +52,60 @@ public class Main {
         }
         csvBuilder.append("\n");
 
+        processUsingFor(files, rules);
+        processUsingParallelStream(files, rules);
+
+        File outputFile = new File(String.format(
+                "result-%d.csv",
+                System.currentTimeMillis()
+        ));
+        try (FileWriter writer = new FileWriter(outputFile)) {
+            writer.write(csvBuilder.toString());
+        } catch (IOException e) {
+            log.warning("failed to write result.csv");
+        }
+    }
+
+    private static void processUsingParallelStream(List<File> files, AbstractRule[] rules) {
+        StringBuilder csvBuilder = new StringBuilder();
+        long startTime = System.currentTimeMillis();
+        files.parallelStream()
+                .forEach(file -> {
+                    log.fine(String.format(
+                            "processing file '%s'",
+                            file
+                    ));
+                    long startTimeForFile = System.currentTimeMillis();
+                    String csvLine = Arrays.stream(rules)
+                            .map(rule -> rule.raisesRedFlag(file))
+                            .map(Object::toString)
+                            .collect(Collectors.joining(","));
+
+                    long endTimeForFile = System.currentTimeMillis();
+                    log.fine(String.format(
+                            "applied %d rules in %dms",
+                            rules.length,
+                            endTimeForFile - startTimeForFile
+                    ));
+                    csvBuilder
+                            .append(file.getName())
+                            .append(",")
+                            .append(csvLine)
+                            .append("\n");
+                });
+        long endTime = System.currentTimeMillis();
+        log.info(String.format(
+                "processed %d files in %dms",
+                files.size(),
+                endTime - startTime)
+        );
+    }
+
+    private static void processUsingFor(List<File> files, AbstractRule[] rules) {
+        StringBuilder csvBuilder = new StringBuilder();
         long startTime = System.currentTimeMillis();
         for (File file : files) {
-            log.info(String.format(
+            log.fine(String.format(
                     "processing file '%s'",
                     file
             ));
@@ -69,7 +120,7 @@ public class Main {
                     .append(csvLine)
                     .append("\n");
             long endTimeForFile = System.currentTimeMillis();
-            log.info(String.format(
+            log.fine(String.format(
                     "applied %d rules in %dms",
                     rules.length,
                     endTimeForFile - startTimeForFile
@@ -81,16 +132,6 @@ public class Main {
                 files.size(),
                 endTime - startTime)
         );
-
-        File outputFile = new File(String.format(
-                "result-%d.csv",
-                System.currentTimeMillis()
-        ));
-        try (FileWriter writer = new FileWriter(outputFile)) {
-            writer.write(csvBuilder.toString());
-        } catch (IOException e) {
-            log.warning("failed to write result.csv");
-        }
     }
 
     private static AbstractRule[] constructRules() {
