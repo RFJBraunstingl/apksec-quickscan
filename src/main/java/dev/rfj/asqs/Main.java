@@ -13,6 +13,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.zip.ZipException;
+import java.util.zip.ZipFile;
 
 public class Main {
 
@@ -29,6 +31,9 @@ public class Main {
 
         List<File> files = new LinkedList<>();
         for (String pattern : args) {
+            if (pattern.startsWith("-")) {
+                continue;
+            }
             List<File> filesForPattern = FileGlobber.getFilesForPattern(pattern);
             log.info(String.format("found %d files for pattern '%s' ",
                     filesForPattern.size(),
@@ -80,30 +85,36 @@ public class Main {
 
     private static void processUsingParallelStream(List<File> files, AbstractRule[] rules, StringBuilder csvBuilder) {
         long startTime = System.currentTimeMillis();
+
         files.parallelStream()
                 .forEach(file -> {
                     log.fine(String.format(
                             "processing file '%s'",
                             file
                     ));
-                    long startTimeForFile = System.currentTimeMillis();
-                    String csvLine = Arrays.stream(rules)
-                            .map(rule -> rule.raisesRedFlag(file))
-                            .map(Object::toString)
-                            .collect(Collectors.joining(","));
+                    try (ZipFile zipFile = new ZipFile(file)) {
+                        long startTimeForFile = System.currentTimeMillis();
+                        String csvLine = Arrays.stream(rules)
+                                .map(rule -> rule.raisesRedFlag(zipFile))
+                                .map(Object::toString)
+                                .collect(Collectors.joining(","));
 
-                    long endTimeForFile = System.currentTimeMillis();
-                    log.fine(String.format(
-                            "applied %d rules in %dms",
-                            rules.length,
-                            endTimeForFile - startTimeForFile
-                    ));
-                    csvBuilder
-                            .append(file.getName())
-                            .append(",")
-                            .append(csvLine)
-                            .append("\n");
+                        long endTimeForFile = System.currentTimeMillis();
+                        log.fine(String.format(
+                                "applied %d rules in %dms",
+                                rules.length,
+                                endTimeForFile - startTimeForFile
+                        ));
+                        csvBuilder
+                                .append(file.getName())
+                                .append(",")
+                                .append(csvLine)
+                                .append("\n");
+                    } catch (IOException e) {
+                        log.warning("failed to read zip file " + file);
+                    }
                 });
+
         long endTime = System.currentTimeMillis();
         log.info(String.format(
                 "processed %d files in %dms",
@@ -114,28 +125,34 @@ public class Main {
 
     private static void processUsingFori(List<File> files, AbstractRule[] rules, StringBuilder csvBuilder) {
         long startTime = System.currentTimeMillis();
+
         for (File file : files) {
             log.fine(String.format(
                     "processing file '%s'",
                     file
             ));
-            long startTimeForFile = System.currentTimeMillis();
-            String csvLine = Arrays.stream(rules)
-                    .map(rule -> rule.raisesRedFlag(file))
-                    .map(Object::toString)
-                    .collect(Collectors.joining(","));
-            csvBuilder
-                    .append(file.getName())
-                    .append(",")
-                    .append(csvLine)
-                    .append("\n");
-            long endTimeForFile = System.currentTimeMillis();
-            log.fine(String.format(
-                    "applied %d rules in %dms",
-                    rules.length,
-                    endTimeForFile - startTimeForFile
-            ));
+            try (ZipFile zipFile = new ZipFile(file)) {
+                long startTimeForFile = System.currentTimeMillis();
+                String csvLine = Arrays.stream(rules)
+                        .map(rule -> rule.raisesRedFlag(zipFile))
+                        .map(Object::toString)
+                        .collect(Collectors.joining(","));
+                long endTimeForFile = System.currentTimeMillis();
+                log.fine(String.format(
+                        "applied %d rules in %dms",
+                        rules.length,
+                        endTimeForFile - startTimeForFile
+                ));
+                csvBuilder
+                        .append(file.getName())
+                        .append(",")
+                        .append(csvLine)
+                        .append("\n");
+            } catch (IOException e) {
+                log.warning("failed to read zip file " + file);
+            }
         }
+
         long endTime = System.currentTimeMillis();
         log.info(String.format(
                 "processed %d files in %dms",

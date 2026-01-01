@@ -8,7 +8,7 @@ import java.util.zip.ZipFile;
 
 /**
  * Pure Java AndroidManifest.xml decoder (binary AXML -> readable XML) with no dependencies.
- *
+ * <p>
  * Features:
  * - Extracts AndroidManifest.xml from APK
  * - Correctly parses AXML chunks
@@ -23,41 +23,39 @@ public class AndroidManifestDecoder {
     public static final int BYTE_BUFFER_SIZE = 8192;
 
     // Chunk types
-    private static final int CHUNK_AXML_FILE         = 0x0003;
-    private static final int CHUNK_STRING_POOL       = 0x0001;
-    private static final int CHUNK_RESOURCE_IDS      = 0x0180;
-    private static final int CHUNK_XML_START_NS      = 0x0100;
-    private static final int CHUNK_XML_END_NS        = 0x0101;
-    private static final int CHUNK_XML_START_TAG     = 0x0102;
-    private static final int CHUNK_XML_END_TAG       = 0x0103;
-    private static final int CHUNK_XML_TEXT          = 0x0104;
+    private static final int CHUNK_AXML_FILE = 0x0003;
+    private static final int CHUNK_STRING_POOL = 0x0001;
+    private static final int CHUNK_RESOURCE_IDS = 0x0180;
+    private static final int CHUNK_XML_START_NS = 0x0100;
+    private static final int CHUNK_XML_END_NS = 0x0101;
+    private static final int CHUNK_XML_START_TAG = 0x0102;
+    private static final int CHUNK_XML_END_TAG = 0x0103;
+    private static final int CHUNK_XML_TEXT = 0x0104;
 
     // Value types (Res_value.dataType)
-    private static final int TYPE_NULL       = 0x00;
-    private static final int TYPE_REFERENCE  = 0x01; // @0x...
-    private static final int TYPE_ATTRIBUTE  = 0x02; // ?0x...
-    private static final int TYPE_STRING     = 0x03;
-    private static final int TYPE_FLOAT      = 0x04;
-    private static final int TYPE_INT_DEC    = 0x10;
-    private static final int TYPE_INT_HEX    = 0x11;
-    private static final int TYPE_INT_BOOLEAN= 0x12;
+    private static final int TYPE_NULL = 0x00;
+    private static final int TYPE_REFERENCE = 0x01; // @0x...
+    private static final int TYPE_ATTRIBUTE = 0x02; // ?0x...
+    private static final int TYPE_STRING = 0x03;
+    private static final int TYPE_FLOAT = 0x04;
+    private static final int TYPE_INT_DEC = 0x10;
+    private static final int TYPE_INT_HEX = 0x11;
+    private static final int TYPE_INT_BOOLEAN = 0x12;
 
     // Common Manifest namespace
     private static final String ANDROID_NS_URI = "http://schemas.android.com/apk/res/android";
 
     public static String decodeManifestFromApk(File apkFile) throws IOException {
-        byte[] axml = extractFileFromApk(apkFile, "AndroidManifest.xml");
-        if (axml == null) throw new FileNotFoundException("AndroidManifest.xml not found in APK");
-        return decodeAxml(axml);
+        try (ZipFile zip = new ZipFile(apkFile)) {
+            return decodeManifestFromZipFile(zip);
+        }
     }
 
-    private static byte[] extractFileFromApk(File apkFile, String path) throws IOException {
-        try (ZipFile zip = new ZipFile(apkFile)) {
-            ZipEntry entry = zip.getEntry(path);
-            if (entry == null) return null;
-            try (InputStream in = zip.getInputStream(entry)) {
-                return readAllBytes(in);
-            }
+    public static String decodeManifestFromZipFile(ZipFile zip) throws IOException {
+        ZipEntry entry = zip.getEntry("AndroidManifest.xml");
+        if (entry == null) return null;
+        try (InputStream in = zip.getInputStream(entry)) {
+            return decodeAxml(readAllBytes(in));
         }
     }
 
@@ -128,11 +126,11 @@ public class AndroidManifestDecoder {
 
                     // ✅ Correct ResXMLTree_attrExt structure:
                     int attrStart = br.readU16();
-                    int attrSize  = br.readU16();
+                    int attrSize = br.readU16();
                     int attrCount = br.readU16();
-                    int idIndex   = br.readU16();
-                    int classIndex= br.readU16();
-                    int styleIndex= br.readU16();
+                    int idIndex = br.readU16();
+                    int classIndex = br.readU16();
+                    int styleIndex = br.readU16();
 
                     String tagName = strings.get(nameIdx);
                     String indent = indent(tagStack.size());
