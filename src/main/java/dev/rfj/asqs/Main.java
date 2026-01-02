@@ -2,6 +2,7 @@ package dev.rfj.asqs;
 
 import dev.rfj.asqs.rules.AbstractRule;
 import dev.rfj.asqs.rules.impl.AllowsCleartextTraffic;
+import dev.rfj.asqs.rules.impl.UsesCertificatePinning;
 import dev.rfj.asqs.rules.impl.UsesFirebase;
 import dev.rfj.asqs.util.FileGlobber;
 
@@ -71,6 +72,14 @@ public class Main {
         } catch (IOException e) {
             log.warning("failed to write result.csv");
         }
+    }
+
+    private static AbstractRule[] constructRules() {
+        return new AbstractRule[]{
+                new UsesFirebase(),
+                new UsesCertificatePinning(),
+                new AllowsCleartextTraffic()
+        };
     }
 
     // check if one of the arguments is "--single-threaded"
@@ -159,12 +168,5 @@ public class Main {
                 files.size(),
                 endTime - startTime)
         );
-    }
-
-    private static AbstractRule[] constructRules() {
-        return new AbstractRule[]{
-                new UsesFirebase(),
-                new AllowsCleartextTraffic()
-        };
     }
 }
