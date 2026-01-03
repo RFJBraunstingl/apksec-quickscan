@@ -2,6 +2,7 @@ package dev.rfj.asqs;
 
 import dev.rfj.asqs.scans.AbstractScan;
 import dev.rfj.asqs.scans.impl.AllowsCleartextTraffic;
+import dev.rfj.asqs.scans.impl.ReportFiles;
 import dev.rfj.asqs.scans.impl.UsesCertificatePinning;
 import dev.rfj.asqs.scans.impl.UsesFirebase;
 import dev.rfj.asqs.util.FileGlobber;
@@ -75,9 +76,10 @@ public class Main {
 
     private static AbstractScan[] constructRules() {
         return new AbstractScan[]{
-                new UsesFirebase(),
-                new UsesCertificatePinning(),
-                new AllowsCleartextTraffic()
+                //new UsesFirebase(),
+                //new UsesCertificatePinning(),
+                //new AllowsCleartextTraffic()
+                new ReportFiles(true)
         };
     }
 
