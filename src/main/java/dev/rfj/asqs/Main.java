@@ -1,9 +1,9 @@
 package dev.rfj.asqs;
 
-import dev.rfj.asqs.rules.AbstractRule;
-import dev.rfj.asqs.rules.impl.AllowsCleartextTraffic;
-import dev.rfj.asqs.rules.impl.UsesCertificatePinning;
-import dev.rfj.asqs.rules.impl.UsesFirebase;
+import dev.rfj.asqs.scans.AbstractScan;
+import dev.rfj.asqs.scans.impl.AllowsCleartextTraffic;
+import dev.rfj.asqs.scans.impl.UsesCertificatePinning;
+import dev.rfj.asqs.scans.impl.UsesFirebase;
 import dev.rfj.asqs.util.FileGlobber;
 
 import java.io.File;
@@ -14,7 +14,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 public class Main {
@@ -47,11 +46,11 @@ public class Main {
                 files.size()
         ));
 
-        AbstractRule[] rules = constructRules();
+        AbstractScan[] rules = constructRules();
 
         StringBuilder csvBuilder = new StringBuilder();
         csvBuilder.append("file");
-        for (AbstractRule rule : rules) {
+        for (AbstractScan rule : rules) {
             csvBuilder.append(",");
             csvBuilder.append(rule.getClass().getSimpleName());
         }
@@ -74,8 +73,8 @@ public class Main {
         }
     }
 
-    private static AbstractRule[] constructRules() {
-        return new AbstractRule[]{
+    private static AbstractScan[] constructRules() {
+        return new AbstractScan[]{
                 new UsesFirebase(),
                 new UsesCertificatePinning(),
                 new AllowsCleartextTraffic()
@@ -92,7 +91,7 @@ public class Main {
         return true;
     }
 
-    private static void processUsingParallelStream(List<File> files, AbstractRule[] rules, StringBuilder csvBuilder) {
+    private static void processUsingParallelStream(List<File> files, AbstractScan[] rules, StringBuilder csvBuilder) {
         long startTime = System.currentTimeMillis();
 
         files.parallelStream()
@@ -104,7 +103,7 @@ public class Main {
                     try (ZipFile zipFile = new ZipFile(file)) {
                         long startTimeForFile = System.currentTimeMillis();
                         String csvLine = Arrays.stream(rules)
-                                .map(rule -> rule.raisesRedFlag(zipFile))
+                                .map(rule -> rule.isFound(zipFile))
                                 .map(Object::toString)
                                 .collect(Collectors.joining(","));
 
@@ -132,7 +131,7 @@ public class Main {
         );
     }
 
-    private static void processUsingFori(List<File> files, AbstractRule[] rules, StringBuilder csvBuilder) {
+    private static void processUsingFori(List<File> files, AbstractScan[] rules, StringBuilder csvBuilder) {
         long startTime = System.currentTimeMillis();
 
         for (File file : files) {
@@ -143,7 +142,7 @@ public class Main {
             try (ZipFile zipFile = new ZipFile(file)) {
                 long startTimeForFile = System.currentTimeMillis();
                 String csvLine = Arrays.stream(rules)
-                        .map(rule -> rule.raisesRedFlag(zipFile))
+                        .map(rule -> rule.isFound(zipFile))
                         .map(Object::toString)
                         .collect(Collectors.joining(","));
                 long endTimeForFile = System.currentTimeMillis();

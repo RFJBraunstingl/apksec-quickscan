@@ -1,20 +1,19 @@
-package dev.rfj.asqs.rules;
+package dev.rfj.asqs.scans;
 
 import dev.rfj.asqs.util.AndroidManifestDecoder;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.logging.Logger;
 import java.util.zip.ZipFile;
 
-public abstract class AndroidManifestBasedRule extends AbstractRule {
+public abstract class AndroidManifestBasedScan extends AbstractScan {
 
-    private static final Logger logger = Logger.getLogger(AndroidManifestBasedRule.class.getName());
+    private static final Logger logger = Logger.getLogger(AndroidManifestBasedScan.class.getName());
 
     @Override
-    public boolean raisesRedFlag(ZipFile apk) {
+    public boolean isFound(ZipFile apk) {
         try {
-            return androidManifestRaisesRedFlag(
+            return isFoundInManifest(
                     AndroidManifestDecoder.decodeManifestFromZipFile(apk)
             );
         } catch (IOException e) {
@@ -23,5 +22,5 @@ public abstract class AndroidManifestBasedRule extends AbstractRule {
         }
     }
 
-    protected abstract boolean androidManifestRaisesRedFlag(String androidManifest);
+    protected abstract boolean isFoundInManifest(String androidManifest);
 }

@@ -1,12 +1,12 @@
-package dev.rfj.asqs.rules;
+package dev.rfj.asqs.scans;
 
 import java.util.Set;
 import java.util.zip.ZipFile;
 
-public abstract class ContainsFileWithEndingZipEntryBasedRule extends AbstractRule {
+public abstract class ContainsFileWithEndingZipEntryBasedScan extends AbstractScan {
 
     @Override
-    public boolean raisesRedFlag(ZipFile apk) {
+    public boolean isFound(ZipFile apk) {
         return apk.stream()
                 .anyMatch(f -> {
                     String fileName = f.getName();
