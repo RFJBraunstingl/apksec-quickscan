@@ -1,6 +1,7 @@
 package dev.rfj.asqs.scans.impl;
 
 import dev.rfj.asqs.scans.AbstractScan;
+import dev.rfj.asqs.util.EntropyCalculator;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,8 +14,6 @@ import java.util.zip.ZipFile;
  * Simple scan to log all file names with their sizes
  */
 public class ReportFiles extends AbstractScan {
-
-    public static final int BYTE_BUFFER_SIZE = 8192;
 
     private static final Logger log = Logger.getLogger(ReportFiles.class.getName());
 
@@ -47,26 +46,7 @@ public class ReportFiles extends AbstractScan {
 
     private String calculateEntropy(ZipFile apk, ZipEntry entry) {
         try (InputStream is = apk.getInputStream(entry)) {
-            // count bytes
-            long[] byteCounts = new long[256];
-            byte[] buf = new byte[BYTE_BUFFER_SIZE];
-            int numOfBytesRead;
-            while ((numOfBytesRead = is.read(buf)) != -1) {
-                for (int i = 0; i < numOfBytesRead; i++) {
-                    int b = buf[i] & 0xFF;
-                    byteCounts[b]++;
-                }
-            }
-
-            // calculate entropy
-            double entropy = 0.0;
-            for (int i = 0; i < 256; i++) {
-                double p = (double) byteCounts[i] / entry.getSize();
-                if (p > 0) {
-                    entropy -= p * Math.log(p);
-                }
-            }
-
+            double entropy = EntropyCalculator.calculateEntropy(is);
             return String.format("%.2f", entropy);
 
         } catch (IOException e) {
