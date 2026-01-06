@@ -2,9 +2,9 @@ package dev.rfj.asqs;
 
 import dev.rfj.asqs.scans.AbstractScan;
 import dev.rfj.asqs.scans.impl.AllowsCleartextTraffic;
+import dev.rfj.asqs.scans.impl.ContainsFirmware;
 import dev.rfj.asqs.scans.impl.ReportFiles;
-import dev.rfj.asqs.scans.impl.UsesCertificatePinning;
-import dev.rfj.asqs.scans.impl.UsesFirebase;
+import dev.rfj.asqs.util.CsvEncoder;
 import dev.rfj.asqs.util.FileGlobber;
 
 import java.io.File;
@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
@@ -78,8 +79,9 @@ public class Main {
         return new AbstractScan[]{
                 //new UsesFirebase(),
                 //new UsesCertificatePinning(),
-                //new AllowsCleartextTraffic()
-                new ReportFiles(true)
+                // new ReportFiles(true),
+                new AllowsCleartextTraffic(),
+                new ContainsFirmware()
         };
     }
 
@@ -97,7 +99,7 @@ public class Main {
         long startTime = System.currentTimeMillis();
 
         files.parallelStream()
-                .forEach(file -> {
+                .map(file -> {
                     log.fine(String.format(
                             "processing file '%s'",
                             file
@@ -105,25 +107,25 @@ public class Main {
                     try (ZipFile zipFile = new ZipFile(file)) {
                         long startTimeForFile = System.currentTimeMillis();
                         String csvLine = Arrays.stream(rules)
-                                .map(rule -> rule.isFound(zipFile))
+                                .map(rule -> rule.scan(zipFile))
                                 .map(Object::toString)
+                                .map(CsvEncoder::encodeString)
                                 .collect(Collectors.joining(","));
-
                         long endTimeForFile = System.currentTimeMillis();
                         log.fine(String.format(
                                 "applied %d rules in %dms",
                                 rules.length,
                                 endTimeForFile - startTimeForFile
                         ));
-                        csvBuilder
-                                .append(file.getName())
-                                .append(",")
-                                .append(csvLine)
-                                .append("\n");
+                        return CsvEncoder.encodeString(file.getName()) + "," + csvLine;
                     } catch (IOException e) {
                         log.warning("failed to read zip file " + file);
+                        return null;
                     }
-                });
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList())
+                .forEach(line -> csvBuilder.append(line).append("\n"));
 
         long endTime = System.currentTimeMillis();
         log.info(String.format(
@@ -144,8 +146,9 @@ public class Main {
             try (ZipFile zipFile = new ZipFile(file)) {
                 long startTimeForFile = System.currentTimeMillis();
                 String csvLine = Arrays.stream(rules)
-                        .map(rule -> rule.isFound(zipFile))
+                        .map(rule -> rule.scan(zipFile))
                         .map(Object::toString)
+                        .map(CsvEncoder::encodeString)
                         .collect(Collectors.joining(","));
                 long endTimeForFile = System.currentTimeMillis();
                 log.fine(String.format(
@@ -154,7 +157,7 @@ public class Main {
                         endTimeForFile - startTimeForFile
                 ));
                 csvBuilder
-                        .append(file.getName())
+                        .append(CsvEncoder.encodeString(file.getName()))
                         .append(",")
                         .append(csvLine)
                         .append("\n");

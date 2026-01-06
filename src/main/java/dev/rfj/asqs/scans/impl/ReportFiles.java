@@ -1,6 +1,6 @@
 package dev.rfj.asqs.scans.impl;
 
-import dev.rfj.asqs.scans.AbstractScan;
+import dev.rfj.asqs.scans.AffectedZipEntryScan;
 import dev.rfj.asqs.util.EntropyCalculator;
 
 import java.io.File;
@@ -13,7 +13,7 @@ import java.util.zip.ZipFile;
 /**
  * Simple scan to log all file names with their sizes
  */
-public class ReportFiles extends AbstractScan {
+public class ReportFiles extends AffectedZipEntryScan {
 
     private static final Logger log = Logger.getLogger(ReportFiles.class.getName());
 
@@ -28,19 +28,17 @@ public class ReportFiles extends AbstractScan {
     }
 
     @Override
-    public boolean isFound(ZipFile apk) {
-        apk.stream().forEach(entry -> {
-            String appName = new File(apk.getName()).getName().replaceAll("\"", "\"\"");
-            String filePath = entry.getName().replaceAll("\"", "\"\"");
-            String fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
-            String size = String.valueOf(entry.getSize());
-            System.out.println('"' + appName + '"' + ',' +
-                    '"' + filePath + '"' + ',' +
-                    '"' + fileName + '"' + ',' +
-                    size +
-                    (calculateEntropy ? ',' + calculateEntropy(apk, entry) : "")
-            );
-        });
+    protected boolean isAffected(ZipFile apk, ZipEntry entry) {
+        String appName = new File(apk.getName()).getName().replaceAll("\"", "\"\"");
+        String filePath = entry.getName().replaceAll("\"", "\"\"");
+        String fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+        String size = String.valueOf(entry.getSize());
+        System.out.println('"' + appName + '"' + ',' +
+                '"' + filePath + '"' + ',' +
+                '"' + fileName + '"' + ',' +
+                size +
+                (calculateEntropy ? ',' + calculateEntropy(apk, entry) : "")
+        );
         return false;
     }
 

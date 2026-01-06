@@ -9,9 +9,9 @@ public class PrintAndroidManifest extends AndroidManifestBasedScan {
     private static final Logger log = Logger.getLogger(PrintAndroidManifest.class.getName());
 
     @Override
-    protected boolean isFoundInManifest(String androidManifest) {
+    protected String scanManifest(String androidManifest) {
         log.info("extracted manifest");
         log.info(androidManifest);
-        return false;
+        return "";
     }
 }

@@ -11,16 +11,16 @@ public abstract class AndroidManifestBasedScan extends AbstractScan {
     private static final Logger logger = Logger.getLogger(AndroidManifestBasedScan.class.getName());
 
     @Override
-    public boolean isFound(ZipFile apk) {
+    public String scan(ZipFile apk) {
         try {
-            return isFoundInManifest(
+            return scanManifest(
                     AndroidManifestDecoder.decodeManifestFromZipFile(apk)
             );
         } catch (IOException e) {
             logger.warning("failed to extract manifest from apk: " + apk.getName());
-            return false;
+            return "false";
         }
     }
 
-    protected abstract boolean isFoundInManifest(String androidManifest);
+    protected abstract String scanManifest(String androidManifest);
 }

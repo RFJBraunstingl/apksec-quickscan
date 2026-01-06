@@ -4,7 +4,7 @@ import dev.rfj.asqs.scans.AndroidManifestBasedScan;
 
 public class AllowsCleartextTraffic extends AndroidManifestBasedScan {
     @Override
-    protected boolean isFoundInManifest(String androidManifest) {
-        return androidManifest.contains("usesCleartextTraffic=\"true\"");
+    protected String scanManifest(String androidManifest) {
+        return String.valueOf(androidManifest.contains("usesCleartextTraffic=\"true\""));
     }
 }

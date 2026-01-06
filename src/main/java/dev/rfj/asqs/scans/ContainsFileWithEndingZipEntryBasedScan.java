@@ -1,18 +1,16 @@
 package dev.rfj.asqs.scans;
 
 import java.util.Set;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public abstract class ContainsFileWithEndingZipEntryBasedScan extends AbstractScan {
+public abstract class ContainsFileWithEndingZipEntryBasedScan extends AffectedZipEntryScan {
 
     @Override
-    public boolean isFound(ZipFile apk) {
-        return apk.stream()
-                .anyMatch(f -> {
-                    String fileName = f.getName();
-                    String ending = fileName.substring(fileName.lastIndexOf(".") + 1);
-                    return fileEndings().contains(ending);
-                });
+    protected boolean isAffected(ZipFile zipFile, ZipEntry zipEntry) {
+        String fileName = zipEntry.getName();
+        String ending = fileName.substring(fileName.lastIndexOf(".") + 1);
+        return fileEndings().contains(ending);
     }
 
     protected abstract Set<String> fileEndings();
