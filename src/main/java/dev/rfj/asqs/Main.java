@@ -1,9 +1,7 @@
 package dev.rfj.asqs;
 
 import dev.rfj.asqs.scans.AbstractScan;
-import dev.rfj.asqs.scans.impl.AllowsCleartextTraffic;
-import dev.rfj.asqs.scans.impl.ContainsFirmware;
-import dev.rfj.asqs.scans.impl.ReportFiles;
+import dev.rfj.asqs.scans.impl.*;
 import dev.rfj.asqs.util.CsvEncoder;
 import dev.rfj.asqs.util.FileGlobber;
 
@@ -77,11 +75,10 @@ public class Main {
 
     private static AbstractScan[] constructRules() {
         return new AbstractScan[]{
-                //new UsesFirebase(),
-                //new UsesCertificatePinning(),
-                // new ReportFiles(true),
                 new AllowsCleartextTraffic(),
-                new ContainsFirmware()
+                new SpecifiesNetworkSecurityConfig(),
+                new ContainsSuspectedFirmwareFile(),
+                new UsesCertificatePinning()
         };
     }
 

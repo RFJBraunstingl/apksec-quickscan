@@ -9,8 +9,7 @@ public abstract class ContainsFileWithEndingZipEntryBasedScan extends AffectedZi
     @Override
     protected boolean isAffected(ZipFile zipFile, ZipEntry zipEntry) {
         String fileName = zipEntry.getName();
-        String ending = fileName.substring(fileName.lastIndexOf(".") + 1);
-        return fileEndings().contains(ending);
+        return fileEndings().stream().anyMatch(fileName::endsWith);
     }
 
     protected abstract Set<String> fileEndings();

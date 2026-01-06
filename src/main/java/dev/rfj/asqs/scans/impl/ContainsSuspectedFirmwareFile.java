@@ -22,9 +22,9 @@ import java.util.zip.ZipFile;
  *  </code>
  * </p>
  */
-public class ContainsFirmware extends AffectedZipEntryScan {
+public class ContainsSuspectedFirmwareFile extends AffectedZipEntryScan {
 
-    private static final Logger LOGGER = Logger.getLogger(ContainsFirmware.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ContainsSuspectedFirmwareFile.class.getName());
     private static final double ENTROPY_THRESHOLD = 0.5;
     private static final String[] IGNORED_FILE_ENDINGS = new String[]{
             ".png",

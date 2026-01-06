@@ -9,10 +9,13 @@ import java.util.Set;
 public class UsesCertificatePinning extends ContainsFileWithEndingZipEntryBasedScan {
 
     private static final Set<String> FILE_ENDINGS = new HashSet<>(Arrays.asList(
-            "crt",
-            "cert",
-            "keystore",
-            "jks"
+            ".crt",
+            ".cert",
+            ".keystore",
+            ".jks",
+            ".crt.txt",
+            ".cert.txt",
+            ".pks"
     ));
 
     @Override
