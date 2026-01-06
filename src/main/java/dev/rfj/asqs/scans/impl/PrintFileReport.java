@@ -13,17 +13,17 @@ import java.util.zip.ZipFile;
 /**
  * Simple scan to log all file names with their sizes
  */
-public class ReportFiles extends AffectedZipEntryScan {
+public class PrintFileReport extends AffectedZipEntryScan {
 
-    private static final Logger log = Logger.getLogger(ReportFiles.class.getName());
+    private static final Logger log = Logger.getLogger(PrintFileReport.class.getName());
 
     private final boolean calculateEntropy;
 
-    public ReportFiles() {
+    public PrintFileReport() {
         this(false);
     }
 
-    public ReportFiles(boolean calculateEntropy) {
+    public PrintFileReport(boolean calculateEntropy) {
         this.calculateEntropy = calculateEntropy;
     }
 

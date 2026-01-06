@@ -46,7 +46,9 @@ public class Main {
                 files.size()
         ));
 
-        AbstractScan[] rules = constructRules();
+        AbstractScan[] rules = constructRules(
+                Arrays.stream(args).anyMatch("--print-file-report"::equalsIgnoreCase)
+        );
 
         StringBuilder csvBuilder = new StringBuilder();
         csvBuilder.append("file");
@@ -73,13 +75,18 @@ public class Main {
         }
     }
 
-    private static AbstractScan[] constructRules() {
-        return new AbstractScan[]{
-                new AllowsCleartextTraffic(),
-                new SpecifiesNetworkSecurityConfig(),
-                new ContainsSuspectedFirmwareFile(),
-                new UsesCertificatePinning()
-        };
+    private static AbstractScan[] constructRules(boolean printFileReport) {
+        List<AbstractScan> scans = new LinkedList<>();
+        if (printFileReport) {
+            scans.add(new PrintFileReport(true));
+        }
+
+        scans.add(new AllowsCleartextTraffic());
+        scans.add(new SpecifiesNetworkSecurityConfig());
+        scans.add(new ContainsSuspectedFirmwareFile());
+        scans.add(new UsesCertificatePinning());
+
+        return scans.toArray(new AbstractScan[0]);
     }
 
     // check if one of the arguments is "--single-threaded"
