@@ -6,7 +6,7 @@ import java.io.InputStream;
 public class EntropyCalculator {
 
     public static final int BYTE_BUFFER_SIZE = 8192;
-    public static final double LOGN_2 = Math.log(2);
+    public static final double LOGN_256 = Math.log(256);
 
     private EntropyCalculator() {}
 
@@ -41,6 +41,6 @@ public class EntropyCalculator {
     }
 
     private static double log2(double x) {
-        return Math.log(x) / LOGN_2;
+        return Math.log(x) / LOGN_256;
     }
 }

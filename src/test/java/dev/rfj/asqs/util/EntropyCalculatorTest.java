@@ -17,8 +17,8 @@ class EntropyCalculatorTests {
     void goodEntropyFile_shouldHaveEntropy_8() throws IOException {
         try (InputStream is = Files.newInputStream(Paths.get(PATH_TO_PERFECTLY_GOOD_ENTROPY_FILE))) {
             double actual = EntropyCalculator.calculateEntropy(is);
-            Assertions.assertTrue(actual > 7.99);
-            Assertions.assertTrue(actual < 8.01);
+            Assertions.assertTrue(actual > 0.99);
+            Assertions.assertTrue(actual < 1.01);
         }
     }
 
