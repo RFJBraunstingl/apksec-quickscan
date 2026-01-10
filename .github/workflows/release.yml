@@ -23,7 +23,7 @@ jobs:
           java-version: 11
 
       - name: Build with Maven
-        run: mvn clean package
+        run: mvn clean test
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -57,11 +57,12 @@ jobs:
             ## 🚀 Release ${{ steps.tag.outputs.TAG }}
 
             **Docker Image**
-            - `${{ secrets.DOCKERHUB_USERNAME }}/your-image:${{ steps.tag.outputs.TAG }}`
-            - https://hub.docker.com/r/${{ secrets.DOCKERHUB_USERNAME }}/your-image
+            - `${{ secrets.DOCKERHUB_USERNAME }}/asqs:${{ steps.tag.outputs.TAG }}`
+            - https://hub.docker.com/r/${{ secrets.DOCKERHUB_USERNAME }}/asqs
 
             **Artifacts**
-            - Executable JAR attached below
+            - Download JAR attached below
+            - `java -jar apksec-quickscan-${{ steps.tag.outputs.TAG }}.jar path/to/your/apk/files/*.apk`
 
           files: |
             target/*.jar
