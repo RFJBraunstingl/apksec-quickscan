@@ -73,6 +73,12 @@ public class ArgumentParser {
                 continue;
             }
 
+            if ("-o".equalsIgnoreCase(arg)) {
+                String outputFileName = args[++i];
+                config = config.withOutputFileName(outputFileName);
+                continue;
+            }
+
             if (arg.startsWith("-")) {
                 System.err.println("unrecognized option: " + arg);
                 return ApplicationConfig.shouldPrintUsageAndExit();

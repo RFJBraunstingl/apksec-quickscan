@@ -63,10 +63,7 @@ public class Main {
             processUsingParallelStream(files, appConfig.scans, csvBuilder);
         }
 
-        File outputFile = new File(String.format(
-                "result-%d.csv",
-                System.currentTimeMillis()
-        ));
+        File outputFile = new File(appConfig.outputFileName);
         try (FileWriter writer = new FileWriter(outputFile)) {
             writer.write(csvBuilder.toString());
         } catch (IOException e) {

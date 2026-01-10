@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.logging.Level;
 
 import static dev.rfj.asqs.util.ApplicationConfig.DEFAULT_LOG_LEVEL;
+import static dev.rfj.asqs.util.ApplicationConfig.DEFAULT_OUTPUT_FILE;
 import static dev.rfj.asqs.util.ArgumentParser.DEFAULT_PATTERN;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -139,5 +140,16 @@ class ArgumentParserTest {
     private void assertInputResultsInFilePatterns(String input, String... expectedPatterns) {
         String[] actualPatterns = parse(input.split(" ")).filePatterns;
         assertArrayEquals(expectedPatterns, actualPatterns);
+    }
+
+    @Test
+    void outputFile_isParsedCorrectly() {
+        assertEquals(DEFAULT_OUTPUT_FILE, parse("").outputFileName);
+        assertEquals("report.csv", parse("-o", "report.csv").outputFileName);
+
+        ApplicationConfig config = parse("--log-error *.zip -o report.csv".split(" "));
+        assertEquals(Level.SEVERE, config.logLevel);
+        assertArrayEquals(new String[] {"*.zip"}, config.filePatterns);
+        assertEquals("report.csv", config.outputFileName);
     }
 }

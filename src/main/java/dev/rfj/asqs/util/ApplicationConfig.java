@@ -10,12 +10,14 @@ import java.util.logging.Level;
 public class ApplicationConfig {
 
     public static final Level DEFAULT_LOG_LEVEL = Level.INFO;
+    public static final String DEFAULT_OUTPUT_FILE = "asqs-report.csv";
 
     public final boolean shouldPrintUsageAndExit;
     public final Level logLevel;
     public final AbstractScan[] scans;
     public final boolean isSingleThreaded;
     public final String[] filePatterns;
+    public final String outputFileName;
 
     public static ApplicationConfig emptyConfig() {
         return new ApplicationConfig(
@@ -23,7 +25,8 @@ public class ApplicationConfig {
                 DEFAULT_LOG_LEVEL,
                 new AbstractScan[] {},
                 false,
-                new String[] {}
+                new String[] {},
+                DEFAULT_OUTPUT_FILE
         );
     }
 
@@ -36,13 +39,15 @@ public class ApplicationConfig {
             Level logLevel,
             AbstractScan[] scans,
             boolean isSingleThreaded,
-            String[] filePatterns
+            String[] filePatterns,
+            String outputFileName
     ) {
         this.shouldPrintUsageAndExit = shouldPrintUsageAndExit;
         this.logLevel = logLevel;
         this.scans = scans;
         this.isSingleThreaded = isSingleThreaded;
         this.filePatterns = filePatterns;
+        this.outputFileName = outputFileName;
     }
 
     public ApplicationConfig withShouldPrintUsageAndExit(boolean shouldPrintUsageAndExit) {
@@ -51,7 +56,8 @@ public class ApplicationConfig {
                 logLevel,
                 scans,
                 isSingleThreaded,
-                filePatterns
+                filePatterns,
+                outputFileName
         );
     }
 
@@ -61,7 +67,8 @@ public class ApplicationConfig {
                 logLevel,
                 scans,
                 isSingleThreaded,
-                filePatterns
+                filePatterns,
+                outputFileName
         );
     }
 
@@ -75,7 +82,8 @@ public class ApplicationConfig {
                 logLevel,
                 newScans.toArray(new AbstractScan[0]),
                 isSingleThreaded,
-                filePatterns
+                filePatterns,
+                outputFileName
         );
     }
 
@@ -85,7 +93,8 @@ public class ApplicationConfig {
                 logLevel,
                 scans,
                 isSingleThreaded,
-                filePatterns
+                filePatterns,
+                outputFileName
         );
     }
 
@@ -99,7 +108,19 @@ public class ApplicationConfig {
                 logLevel,
                 scans,
                 isSingleThreaded,
-                newPatterns.toArray(new String[0])
+                newPatterns.toArray(new String[0]),
+                outputFileName
+        );
+    }
+
+    public ApplicationConfig withOutputFileName(String outputFileName) {
+        return new ApplicationConfig(
+                shouldPrintUsageAndExit,
+                logLevel,
+                scans,
+                isSingleThreaded,
+                filePatterns,
+                outputFileName
         );
     }
 }
