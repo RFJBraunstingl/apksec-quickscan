@@ -2,8 +2,7 @@ package dev.rfj.asqs;
 
 import dev.rfj.asqs.scans.AbstractScan;
 import dev.rfj.asqs.scans.impl.*;
-import dev.rfj.asqs.util.CsvEncoder;
-import dev.rfj.asqs.util.FileGlobber;
+import dev.rfj.asqs.util.*;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -12,6 +11,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
@@ -21,47 +21,46 @@ public class Main {
     private static final Logger log = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) {
-        if (args.length < 1 || "-h".equalsIgnoreCase(args[0])) {
+
+        ApplicationConfig appConfig = ArgumentParser.parse(args);
+
+        if (appConfig.shouldPrintUsageAndExit) {
             System.err.println("Usage: java -jar asqs.jar <pattern>[ <pattern>[ <pattern>[...]]]");
             return;
         }
 
+        LoggingUtil.setLogLevel(appConfig.logLevel);
+
         log.info("Starting ASQS");
-        log.info("args: " + Arrays.toString(args));
+        log.fine("args: " + Arrays.toString(args));
 
         List<File> files = new LinkedList<>();
-        for (String pattern : args) {
-            if (pattern.startsWith("-")) {
-                continue;
-            }
+        for (String pattern : appConfig.filePatterns) {
             List<File> filesForPattern = FileGlobber.getFilesForPattern(pattern);
-            log.info(String.format("found %d files for pattern '%s' ",
+            log.fine(String.format("found %d files for pattern '%s' ",
                     filesForPattern.size(),
                     pattern
             ));
             files.addAll(filesForPattern);
         }
         log.info(String.format(
-                "Found %d files overall",
+                "Found %d files to process",
                 files.size()
         ));
 
-        AbstractScan[] rules = constructRules(
-                Arrays.stream(args).anyMatch("--print-file-report"::equalsIgnoreCase)
-        );
-
         StringBuilder csvBuilder = new StringBuilder();
         csvBuilder.append("file");
-        for (AbstractScan rule : rules) {
+        for (AbstractScan rule : appConfig.scans) {
             csvBuilder.append(",");
             csvBuilder.append(rule.getClass().getSimpleName());
+            log.log(Level.FINE, "apply scan '{0}'", rule.getClass().getSimpleName());
         }
         csvBuilder.append("\n");
 
-        if (isMultiThreadedMode(args)) {
-            processUsingParallelStream(files, rules, csvBuilder);
+        if (appConfig.isSingleThreaded) {
+            processUsingFori(files, appConfig.scans, csvBuilder);
         } else {
-            processUsingFori(files, rules, csvBuilder);
+            processUsingParallelStream(files, appConfig.scans, csvBuilder);
         }
 
         File outputFile = new File(String.format(
@@ -73,30 +72,6 @@ public class Main {
         } catch (IOException e) {
             log.warning("failed to write result.csv");
         }
-    }
-
-    private static AbstractScan[] constructRules(boolean printFileReport) {
-        List<AbstractScan> scans = new LinkedList<>();
-        if (printFileReport) {
-            scans.add(new PrintFileReport(true));
-        }
-
-        scans.add(new AllowsCleartextTraffic());
-        scans.add(new SpecifiesNetworkSecurityConfig());
-        scans.add(new ContainsSuspectedFirmwareFile());
-        scans.add(new UsesCertificatePinning());
-
-        return scans.toArray(new AbstractScan[0]);
-    }
-
-    // check if one of the arguments is "--single-threaded"
-    private static boolean isMultiThreadedMode(String[] args) {
-        for (String arg : args) {
-            if ("--single-threaded".equalsIgnoreCase(arg)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private static void processUsingParallelStream(List<File> files, AbstractScan[] rules, StringBuilder csvBuilder) {
