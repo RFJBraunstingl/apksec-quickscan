@@ -47,9 +47,21 @@ jobs:
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/asqs:${{ steps.tag.outputs.TAG }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/asqs:latest
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release and upload JAR
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.TAG }}
           name: Release ${{ steps.tag.outputs.TAG }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body: |
+            ## 🚀 Release ${{ steps.tag.outputs.TAG }}
+
+            **Docker Image**
+            - `${{ secrets.DOCKERHUB_USERNAME }}/your-image:${{ steps.tag.outputs.TAG }}`
+            - https://hub.docker.com/r/${{ secrets.DOCKERHUB_USERNAME }}/your-image
+
+            **Artifacts**
+            - Executable JAR attached below
+
+          files: |
+            target/*.jar
