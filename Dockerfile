@@ -5,7 +5,7 @@ COPY pom.xml /
 
 RUN mvn clean package
 
-FROM eclipse-temurin:25
+FROM eclipse-temurin:25-jre-alpine
 
 COPY --from=builder /target/apksec-quickscan-*.jar /asqs.jar
 
