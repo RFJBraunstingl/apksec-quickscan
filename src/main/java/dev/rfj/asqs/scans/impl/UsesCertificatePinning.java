@@ -1,12 +1,12 @@
 package dev.rfj.asqs.scans.impl;
 
-import dev.rfj.asqs.scans.ContainsFileWithEndingZipEntryBasedScan;
+import dev.rfj.asqs.scans.ContainsAssetWithEndingZipEntryBasedScan;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-public class UsesCertificatePinning extends ContainsFileWithEndingZipEntryBasedScan {
+public class UsesCertificatePinning extends ContainsAssetWithEndingZipEntryBasedScan {
 
     private static final Set<String> FILE_ENDINGS = new HashSet<>(Arrays.asList(
             ".crt",
