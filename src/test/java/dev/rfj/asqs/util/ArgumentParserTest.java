@@ -75,6 +75,10 @@ class ArgumentParserTest {
                 "--scan-print-zip-entries",
                 PrintZipEntries.class
         );
+        assertInputResultsInScans(
+                "--scan-extract-suspected-firmware",
+                ExtractSuspectedFirmwareFiles.class
+        );
     }
 
     private void assertInputResultsInScans(String input, Class<? extends AbstractScan>... expectedScans) {

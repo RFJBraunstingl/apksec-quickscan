@@ -31,6 +31,7 @@ public class ArgumentParser {
         scanMap.put("print-file-report", new PrintFileReport());
         scanMap.put("print-file-entropy", new PrintFileReport(true));
         scanMap.put("print-zip-entries", new PrintZipEntries());
+        scanMap.put("extract-suspected-firmware", new ExtractSuspectedFirmwareFiles());
 
         return scanMap;
     }
