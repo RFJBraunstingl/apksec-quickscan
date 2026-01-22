@@ -8,7 +8,8 @@
 
 ## Usage
 ```
-java -jar target/apksec-quickscan-<version>.jar --scan-allows-cleartext-traffic '../apk/iotspotter_android/*'
+mvn clean package
+java -jar target/apksec-quickscan-*.jar --scan-allows-cleartext-traffic '../apk/iotspotter_android/*'
 # => ...
 # => INFO: processed 31742 files in 1745ms
 ```
