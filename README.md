@@ -4,7 +4,7 @@
 - scans can look at resource files in apks (such as the AndroidManifest.xml)
 - does not decompile code for speed
 - can compute entropy for files - used for e.g. the firmware scan
-- can scan 31742 in <2s on a MacBook
+- can scan 31742 files in <2s on a MacBook
 
 ## Usage
 ```
