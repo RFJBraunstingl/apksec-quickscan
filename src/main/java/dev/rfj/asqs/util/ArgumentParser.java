@@ -32,6 +32,7 @@ public class ArgumentParser {
         scanMap.put("print-file-entropy", new PrintFileReport(true));
         scanMap.put("print-zip-entries", new PrintZipEntries());
         scanMap.put("extract-suspected-firmware", new ExtractSuspectedFirmwareFiles());
+        scanMap.put("uses-react-native", new UsesReactNative());
 
         return scanMap;
     }

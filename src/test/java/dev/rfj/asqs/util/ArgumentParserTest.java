@@ -79,6 +79,10 @@ class ArgumentParserTest {
                 "--scan-extract-suspected-firmware",
                 ExtractSuspectedFirmwareFiles.class
         );
+        assertInputResultsInScans(
+                "--scan-uses-react-native",
+                UsesReactNative.class
+        );
     }
 
     private void assertInputResultsInScans(String input, Class<? extends AbstractScan>... expectedScans) {
